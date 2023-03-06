@@ -56,23 +56,21 @@ int encrypt(char* path){
 	int mod=get_n();
 	int enc=get_e();
 	
-	FILE* rptr=fopen(path, "r");
+	FILE* rptr=fopen(path, "rb");
 	
 	char* new_path=malloc(sizeof(char)*(strlen(path)+4));
 	strcpy(new_path, path);
 	strcat(new_path, ".gyb");
 	FILE* wptr=fopen(new_path, "w");
+	free(new_path);
 	
-	char c = getc(rptr);
+	int c = getc(rptr);
 	while (c!=EOF)
 	{
-    char* conv=malloc(sizeof(long));
-    sprintf(conv, "%d", c);
-		fprintf(wptr, "%ldf", rsa(enc, mod, atol(conv)));
-    free(conv);
+		fprintf(wptr, "%ldf", rsa(enc, mod, (long)c));
     c = getc(rptr);
 	}
-	free(new_path);
+	
 	fclose(rptr);
 	fclose(wptr);
 	return remove(path);
@@ -99,9 +97,10 @@ int decrypt(char * path){
 	  long number;
 	  if (fscanf(rptr, "%ld", &number)!=1)
 	    break;
-	  fprintf(wptr, "%c", (int)rsa(dec, mod, number));
+	  putc((int)rsa(dec, mod, number), wptr);
     c = getc(rptr);
 	}
+	
 	fclose(rptr);
 	fclose(wptr);
 	return remove(path);
