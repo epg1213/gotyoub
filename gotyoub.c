@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #define p 1009
 #define q 1109
 #define e 1019
@@ -47,22 +48,94 @@ long rsa(int key, int mod, long msg){
   return res;
 }
 
+int getInt(char a, char b){
+    if(a>57){
+        a-=87;
+    } else {
+        a-=48;
+    }
+    if(b>57){
+        b-=87;
+    } else {
+        b-=48;
+    }
+    return 16*a+b;
+}
+
+void byg_to_gyb(char* bygpath, char* gybpath){
+    srand(time(NULL));
+    FILE* rptr=fopen(bygpath, "r");
+    FILE* wptr=fopen(gybpath, "wb");
+    char a=' ';
+    char i=getc(rptr);
+    int random;
+    char c;
+    while(i!=EOF){
+        random=rand()%16;
+        if(random<5){
+            c=97+random;
+        } else {
+            c=i;
+            i=getc(rptr);
+        }
+        if(a==' '){
+            a=c;
+        } else {
+            putc(getInt(a, c), wptr);
+            a=' ';
+        }
+    }
+    if(a!=' '){
+        random=rand()%5;
+        c=97+random;
+        putc(getInt(a, c), wptr);
+    }
+
+    fclose(rptr);
+    fclose(wptr);
+}
+
+void gyb_to_byg(char* gybpath, char* bygpath){
+    
+    FILE* rptr=fopen(gybpath, "rb");
+    FILE* wptr=fopen(bygpath, "w");
+
+    int i=getc(rptr);
+    while (i!=EOF){
+        char* c=malloc(2);
+        sprintf(c, "%02x", i);
+        if (c[0]<58 || 101<c[0] ){
+            putc(c[0], wptr);
+        }
+        if (c[1]<58 || 101<c[1] ){
+            putc(c[1], wptr);
+        }
+        i=getc(rptr);
+        free(c);
+    }
+    fclose(rptr);
+    fclose(wptr);
+}
+
 /*
   encrypt(char* path)
   takes the path to the file to encrypt as a parameter
   returns whether the original file was successfully removed or not
 */
-int encrypt(char* path){
+void encrypt(char* path){
+	char* bygpath=malloc(strlen(path)+4);
+	strcpy(bygpath, path);
+	strcat(bygpath, ".byg");
+
+	char* gybpath=malloc(strlen(path)+4);
+	strcpy(gybpath, path);
+	strcat(gybpath, ".gyb");
+
 	int mod=get_n();
 	int enc=get_e();
 	
 	FILE* rptr=fopen(path, "rb");
-	
-	char* new_path=malloc(sizeof(char)*(strlen(path)+4));
-	strcpy(new_path, path);
-	strcat(new_path, ".gyb");
-	FILE* wptr=fopen(new_path, "w");
-	free(new_path);
+	FILE* wptr=fopen(bygpath, "w");
 	
 	int c = getc(rptr);
 	while (c!=EOF)
@@ -73,7 +146,11 @@ int encrypt(char* path){
 	
 	fclose(rptr);
 	fclose(wptr);
-	return remove(path);
+  rename(path, gybpath);
+  byg_to_gyb(bygpath, gybpath);
+  remove(bygpath);
+	free(bygpath);
+	free(gybpath);
 }
 
 /*
@@ -81,15 +158,23 @@ int encrypt(char* path){
   takes the path to the file to decrypt as a parameter
   returns whether the encrypted file was successfully removed or not
 */
-int decrypt(char * path){
+void decrypt(char * path){
+	char* bygpath=malloc(strlen(path)+4);
+	strcpy(bygpath, path);
+	strcat(bygpath, ".byg");
+
+	char* gybpath=malloc(strlen(path)+4);
+	strcpy(gybpath, path);
+	strcat(gybpath, ".gyb");
+
+  gyb_to_byg(gybpath, bygpath);
+  rename(gybpath, path);
+
 	int mod=get_n();
 	int dec=get_d();
 
-	path[strlen(path)-4]='\0';
+	FILE* rptr=fopen(bygpath, "r");
 	FILE* wptr=fopen(path, "w");
-	
-  path[strlen(path)]='.';
-	FILE* rptr=fopen(path, "r");
 	
 	char c = 'f';
 	while (c=='f')
@@ -103,7 +188,9 @@ int decrypt(char * path){
 	
 	fclose(rptr);
 	fclose(wptr);
-	return remove(path);
+  remove(bygpath);
+	free(bygpath);
+	free(gybpath);
 }
 
 /*
@@ -141,10 +228,10 @@ void main(){
       printf("encrypting: %s", path);
       encrypt(path);
     }else{
+      path[strlen(path)-4]='\0';
       printf("decrypting: %s", path);
       decrypt(path);
     }
   }
   printf("\n");
 }
-
